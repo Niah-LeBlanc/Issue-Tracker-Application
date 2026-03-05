@@ -1,152 +1,164 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import BugListItem from './bugListItem';
-import { useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
-import api from '../api';
-import AddBugModal from './addBugModal';
+import BugListItem from './bugListItem'
+import { useEffect, useState } from 'react'
+import { Search, SlidersHorizontal, Plus, X } from 'lucide-react'
+import api from '../api'
+import AddBugModal from './addBugModal'
 
-interface Bug {
-  _id: string;
-  classification: string;
-  closed: boolean;
-  [key: string]: any;
-}
+interface Bug { _id: string; classification: string; closed: boolean; [key: string]: any }
 
-function BugList() {
-  const [bugs, setBugs] = useState<Bug[]>([]);
-  const [isPending, setIsPending] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [searchValue, setSearchValue] = useState('');
-  const [selected, setSelected] = useState("View all");
-  const [searchedClassification, setSearchedClassification] = useState("");
-  const [minAge, setMinAge] = useState("");
-  const [maxAge, setMaxAge] = useState("");
-  const [sortBy, setSortBy] = useState("name");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+export default function BugList() {
+  const [bugs, setBugs] = useState<Bug[]>([])
+  const [isPending, setIsPending] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  const [searchValue, setSearchValue] = useState('')
+  const [selected, setSelected] = useState('View all')
+  const [searchedClassification, setSearchedClassification] = useState('')
+  const [minAge, setMinAge] = useState('')
+  const [maxAge, setMaxAge] = useState('')
+  const [sortBy, setSortBy] = useState('Newest')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
 
-  const buttons = ["View all", "Closed", "Open"];
-  const classifications = [...new Set(bugs.map(b => b.classification))];
-  const sortByOptions = ["Newest", "Oldest", "Title", "Classification", "Assigned To", "Reported By"];
+  const tabs = ['View all', 'Open', 'Closed']
+  const sortByOptions = ['Newest', 'Oldest', 'Title', 'Classification', 'Assigned To', 'Reported By']
+  const classifications = [...new Set(bugs.map(b => b.classification).filter(Boolean))]
 
-  const clearFilters = () => {
-    setMinAge("");
-    setMaxAge("");
-    setSearchedClassification("");
-    setSearchValue("");
-    setSelected("View all");
-  };
-
-  const fetchBugs = async () => {
-    const response = await api.get('/api/bugs');
-    return response.data;
-  };
+  const clearFilters = () => { setMinAge(''); setMaxAge(''); setSearchedClassification(''); setSearchValue(''); setSelected('View all') }
 
   useEffect(() => {
-    fetchBugs()
-      .then(data => setBugs(data))
-      .catch(err => setError(err))
-      .finally(() => setIsPending(false));
-  }, []);
+    api.get('/api/bugs').then(r => setBugs(r.data)).catch(e => setError(e)).finally(() => setIsPending(false))
+  }, [])
 
-  const SearchWithParams = async () => {
-    setIsPending(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      if (selected === "Closed") params.append("closed", "true");
-      else if (selected === "Open") params.append("closed", "false");
-      if (searchValue) params.append("keywords", searchValue);
-      if (searchedClassification && searchedClassification !== "Classification") params.append("classification", searchedClassification);
-      if (minAge) params.append("minAge", minAge);
-      if (maxAge) params.append("maxAge", maxAge);
-      if (sortBy === "Newest") params.append("sortBy", "newest");
-      else if (sortBy === "Oldest") params.append("sortBy", "oldest");
-      else if (sortBy === "Title") params.append("sortBy", "title");
-      else if (sortBy === "Classification") params.append("sortBy", "classification");
-      else if (sortBy === "Assigned To") params.append("sortBy", "assignedTo");
-      else if (sortBy === "Reported By") params.append("sortBy", "createdBy");
+  const doSearch = async () => {
+    setIsPending(true)
+    const p = new URLSearchParams()
+    if (selected === 'Closed') p.append('closed', 'true')
+    else if (selected === 'Open') p.append('closed', 'false')
+    if (searchValue) p.append('keywords', searchValue)
+    if (searchedClassification) p.append('classification', searchedClassification)
+    if (minAge) p.append('minAge', minAge)
+    if (maxAge) p.append('maxAge', maxAge)
+    const sm: Record<string, string> = { Newest:'newest', Oldest:'oldest', Title:'title', Classification:'classification', 'Assigned To':'assignedTo', 'Reported By':'createdBy' }
+    if (sm[sortBy]) p.append('sortBy', sm[sortBy])
+    try { const r = await api.get(`/api/bugs?${p}`); setBugs(r.data) }
+    catch (e) { console.error(e) }
+    finally { setIsPending(false) }
+  }
 
-      const response = await api.get(`/api/bugs?${params.toString()}`);
-      setBugs(response.data);
-    } catch (err) {
-      console.error("Error fetching bugs:", err);
-    } finally {
-      setIsPending(false);
-    }
-  };
+  useEffect(() => { setSearchedClassification(''); doSearch() }, [selected])
+  useEffect(() => { doSearch() }, [searchedClassification, sortBy])
 
-  useEffect(() => {
-    setSearchedClassification("");
-    SearchWithParams();
-  }, [selected]);
-
-  useEffect(() => {
-    SearchWithParams();
-  }, [searchedClassification, sortBy]);
-
-  if (isPending) return <div>Loading bugs...</div>;
-  if (error) return <div>Error loading bugs: {error.message}</div>;
+  const ctrlCls = 'h-9 border border-neutral-300 bg-white rounded-md px-3 text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-900 transition appearance-none'
 
   return (
-    <>
-      <section className="flex flex-col text-center align-middle pt-16 bg-blue-300 overflow-auto min-h-screen border-2 border-black">
-        <h1 className="text-7xl text-gray-800 font-black pb-6">All Bugs</h1>
-        <button className='bg-red-500 p-2 w-2/12 rounded-2xl self-center mb-2' onClick={() => setIsModalOpen(true)}>Report Bug</button>
-        <div className="filter-container">
-          <div className="flex flex-col items-center">
-            <h2 className="text-gray-800 font-medium pb-2">Options:</h2>
-            <div className="inline-flex overflow-hidden bg-white border divide-x rounded-lg dark:bg-gray-900 rtl:flex-row-reverse dark:border-gray-700 dark:divide-gray-700">
-              {buttons.map((label) => (
-                <button key={label} onClick={() => setSelected(label)} className={`px-5 py-2 text-xs font-medium transition-colors duration-200 sm:text-sm ${selected === label ? "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100" : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"}`}>
-                  {label}
-                </button>
-              ))}
+    <div className="min-h-screen bg-neutral-50">
+
+      {/* Page header */}
+      <div className="bg-white border-b border-neutral-200 px-6 md:px-10 pt-8 pb-0">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between gap-4 mb-5">
+            <div>
+              <p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">Issue Tracker</p>
+              <h1 className="text-2xl font-bold text-neutral-900">All Bugs</h1>
             </div>
-          </div>
-          <div className="flex flex-col items-center">
-            <h2 className="text-gray-800 font-medium pb-2">Classification:</h2>
-            <select value={searchedClassification} onChange={(e) => setSearchedClassification(e.target.value)} className="border border-gray-300 rounded-full text-gray-600 h-10 pl-5 pr-10 bg-white hover:border-gray-400 focus:outline-none appearance-none">
-              <option value="">Classification</option>
-              {classifications.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col items-center">
-            <h2 className="text-gray-800 font-medium pb-2">Sort By:</h2>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="border border-gray-300 rounded-full text-gray-600 h-10 pl-5 pr-10 bg-white hover:border-gray-400 focus:outline-none appearance-none">
-              {sortByOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col items-center">
-            <h2 className="text-gray-800 font-medium pb-2">Min Age (days):</h2>
-            <input type="text" placeholder="Min age in days" value={minAge} onChange={(e) => setMinAge(e.target.value)} className="bg-white h-10 px-5 pr-10 rounded-full text-sm focus:outline-none" />
-          </div>
-          <div className="flex flex-col items-center">
-            <h2 className="text-gray-800 font-medium pb-2">Max Age (days):</h2>
-            <input type="text" placeholder="Max age in days" value={maxAge} onChange={(e) => setMaxAge(e.target.value)} className="bg-white h-10 px-5 pr-10 rounded-full text-sm focus:outline-none" />
-          </div>
-          <div className="flex flex-col items-center">
-            <h2 className="text-gray-800 font-medium pb-2">Reset:</h2>
-            <button onClick={clearFilters} className="bg-white h-10 px-5 rounded-full text-sm focus:outline-none hover:bg-gray-100 font-medium">Clear Filters</button>
-          </div>
-          <div className="flex flex-col items-center">
-            <h2 className="text-gray-800 font-medium pb-2">Search:</h2>
-            <div className="relative flex items-center">
-              <input type="search" name="search" placeholder="Search" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} className="bg-white h-10 px-5 pr-12 rounded-full text-sm focus:outline-none w-40" />
-              <button onClick={SearchWithParams} onKeyDown={(e) => e.key === "Enter" && SearchWithParams()} type="button" className="absolute right-3">
-                <Search className="h-5 w-5 text-gray-600" />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowFilters(p => !p)}
+                className="inline-flex items-center gap-2 h-9 px-4 border border-neutral-300 bg-white rounded-md text-sm text-neutral-700 hover:border-neutral-500 transition"
+              >
+                <SlidersHorizontal size={14} />
+                Filters
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="inline-flex items-center gap-2 h-9 px-4 bg-neutral-900 text-white rounded-md text-sm font-medium hover:bg-neutral-700 transition"
+              >
+                <Plus size={14} /> Report Bug
               </button>
             </div>
           </div>
+
+          {/* Tabs */}
+          <div className="flex gap-0 border-b border-neutral-100">
+            {tabs.map(t => (
+              <button key={t} onClick={() => setSelected(t)}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                  selected === t
+                    ? 'border-neutral-900 text-neutral-900'
+                    : 'border-transparent text-neutral-400 hover:text-neutral-700'
+                }`}>
+                {t}
+              </button>
+            ))}
+          </div>
         </div>
-        <section className="grid grid-cols-1 lg:grid-cols-3 pt-16 bg-blue-300 overflow-auto min-h-screen border-2 border-black">
-          {bugs.map((bug: any) => (
-            <BugListItem key={bug._id} bug={bug} />
-          ))}
-        </section>
-      </section>
+      </div>
+
+      {/* Filters */}
+      {showFilters && (
+        <div className="bg-neutral-100 border-b border-neutral-200 px-6 md:px-10 py-4">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-neutral-500 font-medium">Classification</label>
+              <select value={searchedClassification} onChange={e => setSearchedClassification(e.target.value)} className={ctrlCls + ' pr-8 cursor-pointer'}>
+                <option value="">Any</option>
+                {classifications.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-neutral-500 font-medium">Sort by</label>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className={ctrlCls + ' pr-8 cursor-pointer'}>
+                {sortByOptions.map(o => <option key={o}>{o}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-neutral-500 font-medium">Min age (days)</label>
+              <input type="text" placeholder="0" value={minAge} onChange={e => setMinAge(e.target.value)} className={ctrlCls + ' w-28'} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-neutral-500 font-medium">Max age (days)</label>
+              <input type="text" placeholder="∞" value={maxAge} onChange={e => setMaxAge(e.target.value)} className={ctrlCls + ' w-28'} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-neutral-500 font-medium">Search</label>
+              <div className="relative">
+                <input
+                  type="search"
+                  placeholder="Keywords…"
+                  value={searchValue}
+                  onChange={e => setSearchValue(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && doSearch()}
+                  className={ctrlCls + ' w-44 pr-9'}
+                />
+                <button onClick={doSearch} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700">
+                  <Search size={14} />
+                </button>
+              </div>
+            </div>
+            <button onClick={clearFilters} className="h-9 px-3 text-xs text-neutral-400 hover:text-neutral-700 flex items-center gap-1 transition-colors">
+              <X size={13} /> Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Grid */}
+      <div className="max-w-7xl mx-auto px-6 md:px-10 py-8">
+        {isPending ? (
+          <div className="text-sm text-neutral-400 py-24 text-center">Loading bugs…</div>
+        ) : error ? (
+          <div className="text-sm text-red-500 py-24 text-center">Error loading bugs.</div>
+        ) : bugs.length === 0 ? (
+          <div className="text-sm text-neutral-400 py-24 text-center">No bugs found.</div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {bugs.map(bug => <BugListItem key={bug._id} bug={bug} />)}
+          </div>
+        )}
+      </div>
+
       {isModalOpen && <AddBugModal onClose={() => setIsModalOpen(false)} />}
-    </>
+    </div>
   )
 }
-
-export default BugList

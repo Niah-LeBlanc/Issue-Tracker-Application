@@ -1,81 +1,40 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'
+import { Bug, UserCheck } from 'lucide-react'
 
-
-function UserListItem({user}: any ) {
-	//pass user through the function
-	const currentUser = user;
+export default function UserListItem({ user }: any) {
   return (
-    <>
-			<a href="#" className="relative inline-block duration-300 ease-in-out transition-transform transform hover:-translate-y-2 w-full">
-				<div className="shadow p-4 rounded-lg bg-white">
-				<div className="mt-4">
-					<h2 className="font-medium text-base md:text-lg text-gray-800 line-clamp-1" title="New York">
-					{user.name}
-					</h2>
-					<p className="mt-2 text-sm text-gray-800 line-clamp-1" title="New York, NY 10004, United States">
-					{user.email}
-					</p>
-					<p className="mt-2 text-sm text-gray-800 line-clamp-1" title="New York, NY 10004, United States">
-						<i className="fas fa-map-marker-alt mr-2 text-lg text-gray-50">{user.role?.join(', ')}</i>
-					</p>
-				</div>
+    <div className="bg-white border border-neutral-200 rounded-lg hover:border-neutral-400 hover:shadow-sm transition-all duration-150 p-5">
+      {/* Avatar + name */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-9 h-9 rounded-full bg-neutral-900 text-white flex items-center justify-center text-xs font-bold shrink-0">
+          {user.name?.charAt(0)?.toUpperCase() ?? '?'}
+        </div>
+        <div className="min-w-0">
+          <h2 className="font-semibold text-sm text-neutral-900 truncate">{user.name}</h2>
+          <p className="text-xs text-neutral-400 truncate">{user.email}</p>
+        </div>
+      </div>
 
-				<div className="grid grid-cols-2 grid-rows-2 gap-4 mt-8">
-					<p className="inline-flex flex-col xl:flex-row xl:items-center text-gray-800">
-					<span className="mt-2 xl:mt-0">
-						created Bugs: {user.createdBugs ? user.createdBugs.length : 0}
-					</span>
-					</p>
-					<p className="inline-flex flex-col xl:flex-row xl:items-center text-gray-800">
-					<span className="mt-2 xl:mt-0">
-						assigned Bugs: {user.assignedBugs ? user.assignedBugs.length : 0}
-					</span>
-					</p>
-					<p className="inline-flex flex-col xl:flex-row xl:items-center text-gray-800">
-						<span className="mt-2 xl:mt-0">
-						<p className='text-white'>
-							{Array.isArray(user.createdBugs) && user.createdBugs.length > 0 ? (
-								user.createdBugs.map((bug: any, idx: number) => (
-									<div key={bug._id || idx} className="mb-2 text-white">
-										<p className="font-semibold text-blue-200">{bug.title}</p>
-										<p className="italic">{bug.status}</p>
-									</div>
-								))
-							) : (
-								<p className="text-gray-400">No bugs Created.</p>
-							)}
-						</p>
-					</span>
-					</p>
-					<p className="inline-flex flex-col xl:flex-row xl:items-center text-gray-800">
-					<span className="mt-2 xl:mt-0">
-						<p className='text-white'>
-							{Array.isArray(user.assignedBugs) && user.assignedBugs.length > 0 ? (
-								user.assignedBugs.map((bug: any, idx: number) => (
-									<div key={bug._id || idx} className="mb-2 text-white">
-										<p className="font-semibold text-blue-200">{bug.title}</p>
-										<p className="italic">{bug.status}</p>
-									</div>
-								))
-							) : (
-								<p className="text-gray-400">No bugs assigned.</p>
-							)}
-						</p>
-					</span>
-					</p>
-				</div>
+      {/* Roles */}
+      {Array.isArray(user.role) && user.role.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-4">
+          {user.role.map((r: string) => (
+            <span key={r} className="text-[10px] capitalize bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">{r}</span>
+          ))}
+        </div>
+      )}
 
-				<div className="grid grid-cols-2 mt-8">
-					<div className="flex items-center">
-					<div className='mt-4 hover:-translate-y-1 ease-in-out transition'>
-						<Link to='/UserEditor' state={{user: currentUser}}><span className="justify-center text-white border-gray-50/50 border-3 w-10/12 mt-5  bg-purple-600/30 p-2 rounded-2xl transition hover:bg-purple-400/50 ">Edit User</span></Link>
-					</div>
-					</div>
-				</div>
-				</div>
-			</a>				
-    </>
+      {/* Stats */}
+      <div className="flex items-center gap-4 text-xs text-neutral-400 mb-4">
+        <span className="flex items-center gap-1"><Bug size={11} /> {user.createdBugs?.length ?? 0} created</span>
+        <span className="flex items-center gap-1"><UserCheck size={11} /> {user.assignedBugs?.length ?? 0} assigned</span>
+      </div>
+
+      <div className="border-t border-neutral-100 pt-3">
+        <Link to="/UserEditor" state={{ user }} className="text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors">
+          Edit user →
+        </Link>
+      </div>
+    </div>
   )
 }
-
-export default UserListItem

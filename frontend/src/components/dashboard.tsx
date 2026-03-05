@@ -1,98 +1,100 @@
-import { useState, useEffect } from 'react';
-import PieChart from './Piechart';
+import { useState, useEffect } from 'react'
+import PieChart from './Piechart'
+import { Users, Bug, CircleDot, CheckCircle2 } from 'lucide-react'
 
-function Dashboard() {
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [totalBugs, setTotalBugs] = useState(0);
-  const [closedBugs, setClosedBugs] = useState(0);
-  const [openBugs, setOpenBugs] = useState(0);
-  const [users, setUsers] = useState([]);
-  const labels = ['Closed Bugs', 'Open Bugs'];
-  const values = [closedBugs, openBugs];
+export default function Dashboard() {
+  const [totalUsers, setTotalUsers] = useState(0)
+  const [totalBugs, setTotalBugs] = useState(0)
+  const [closedBugs, setClosedBugs] = useState(0)
+  const [openBugs, setOpenBugs] = useState(0)
+  const [users, setUsers] = useState<any[]>([])
 
   useEffect(() => {
-    const fetchInfo = async () => {
-      const bugResponse = await fetch('/api/bugs');
-      const userResponse = await fetch('/api/users');
-      if (!bugResponse.ok) throw new Error('Failed to fetch bugs');
-      if (!userResponse.ok) throw new Error('Failed to fetch users');
-      const bugs = await bugResponse.json();
-      const users = await userResponse.json();
+    const load = async () => {
+      const [bugRes, userRes] = await Promise.all([fetch('/api/bugs'), fetch('/api/users')])
+      const bugs = await bugRes.json()
+      const users = await userRes.json()
+      setTotalBugs(bugs.length)
+      setTotalUsers(users.length)
+      setUsers(users)
+      setClosedBugs(bugs.filter((b: any) => b.closed).length)
+      setOpenBugs(bugs.filter((b: any) => !b.closed).length)
+    }
+    load()
+  }, [])
 
-      const closedCount = bugs.filter((bug: { closed: boolean }) => bug.closed === true).length;
-      const openCount = bugs.filter((bug: { closed: boolean }) => bug.closed === false).length;
-
-      setTotalBugs(bugs.length);
-      setTotalUsers(users.length);
-      setUsers(users);
-      setClosedBugs(closedCount);
-      setOpenBugs(openCount);
-    };
-    fetchInfo();
-  }, []);
+  const stats = [
+    { label: 'Total Users', value: totalUsers, icon: Users },
+    { label: 'Total Bugs', value: totalBugs, icon: Bug },
+    { label: 'Open Bugs', value: openBugs, icon: CircleDot },
+    { label: 'Closed Bugs', value: closedBugs, icon: CheckCircle2 },
+  ]
 
   return (
-    <>
-      <div className="h-screen w-full top-14">
-        <section id="content" className="w-full p-5 right-0 transition-all duration-500 ease-in-out">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="bg-slate-50 p-5 m-2 rounded-md flex justify-between items-center shadow hover:-translate-y-2 transition">
-              <div>
-                <h3 className="font-bold">Total Users</h3>
-                <p className="text-gray-500">{totalUsers}</p>
+    <div className="min-h-screen bg-neutral-50">
+      <div className="bg-white border-b border-neutral-200 px-6 md:px-10 py-6">
+        <div className="max-w-7xl mx-auto">
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">Admin</p>
+          <h1 className="text-2xl font-bold text-neutral-900">Dashboard</h1>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 md:px-10 py-8 space-y-6">
+
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map(({ label, value, icon: Icon }) => (
+            <div key={label} className="bg-white border border-neutral-200 rounded-lg p-5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs text-neutral-400 font-medium uppercase tracking-wide">{label}</p>
+                <Icon size={16} className="text-neutral-300" />
               </div>
+              <p className="text-3xl font-bold text-neutral-900">{value}</p>
             </div>
-            <div className="bg-slate-50 p-5 m-2 flex justify-between items-center shadow hover:-translate-y-2 transition">
-              <div>
-                <h3 className="font-bold">Total Bugs</h3>
-                <p className="text-gray-500">{totalBugs}</p>
-              </div>
-            </div>
-            <div className="bg-slate-50 p-5 m-2 flex justify-between items-center shadow hover:-translate-y-2 transition">
-              <div>
-                <h3 className="font-bold">Total Open Bugs</h3>
-                <p className="text-gray-500">{openBugs}</p>
-              </div>
-            </div>
-            <div className="bg-slate-50 p-5 m-2 flex justify-between items-center shadow hover:-translate-y-2 transition">
-              <div>
-                <h3 className="font-bold">Total Closed Bugs</h3>
-                <p className="text-gray-500">{closedBugs}</p>
-              </div>
+          ))}
+        </div>
+
+        {/* Chart + table */}
+        <div className="grid lg:grid-cols-2 gap-4">
+          <div className="bg-white border border-neutral-200 rounded-lg p-6">
+            <h2 className="text-sm font-semibold text-neutral-700 mb-6">Bug Status</h2>
+            <div className="max-w-[240px] mx-auto">
+              <PieChart labels={['Closed', 'Open']} data={[closedBugs, openBugs]} />
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
-            <div className="m-2 shadow-md">
-              <h2 className="text-xl p-2">Bug Status Chart</h2>
-              <div id="chart" className="w-8/12 mx-auto">
-                <PieChart labels={labels} data={values} />
-              </div>
+
+          <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-neutral-100">
+              <h2 className="text-sm font-semibold text-neutral-700">All Users</h2>
             </div>
-            <div className="overflow-x-auto m-2 shadow-md">
-              <table className="w-full">
-                <thead className="bg-gray-100 rounded-sm">
-                  <tr>
-                    <th className="text-left px-6">User Name</th>
-                    <th className="text-left px-6">Email</th>
-                    <th className="text-left px-6">Role</th>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-100">
+                    <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wide px-6 py-3">Name</th>
+                    <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wide px-6 py-3">Email</th>
+                    <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wide px-6 py-3">Role</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user: any) => (
-                    <tr key={user._id} className="border-b hover:bg-gray-100">
-                      <td className="px-6">{user.name}</td>
-                      <td className="px-6">{user.email}</td>
-                      <td className="px-6">{Array.isArray(user.role) ? user.role.join(', ') : user.role}</td>
+                  {users.map((u: any) => (
+                    <tr key={u._id} className="border-b border-neutral-50 hover:bg-neutral-50 transition-colors">
+                      <td className="px-6 py-3 text-neutral-900 font-medium text-sm">{u.name}</td>
+                      <td className="px-6 py-3 text-neutral-400 text-xs">{u.email}</td>
+                      <td className="px-6 py-3">
+                        <span className="text-[10px] capitalize bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">
+                          {Array.isArray(u.role) ? u.role.join(', ') : u.role}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
-        </section>
+        </div>
+
       </div>
-    </>
+    </div>
   )
 }
-
-export default Dashboard

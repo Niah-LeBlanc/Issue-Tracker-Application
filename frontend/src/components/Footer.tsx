@@ -1,8 +1,10 @@
-function Footer() {
-  return (<footer className=" bottom-0 left-0 w-full bg-gray-950 text-white p-2">
-    &copy; Brody Boyd 2025
-  </footer>)
+export default function Footer() {
+  return (
+    <footer className="border-t border-neutral-200 bg-white mt-auto">
+      <div className="max-w-7xl mx-auto px-5 py-5 flex items-center justify-between text-xs text-neutral-400">
+        <span className="font-medium tracking-wide">BUGTRACK</span>
+        <span>© 2025</span>
+      </div>
+    </footer>
+  )
 }
-
-export default Footer;
-

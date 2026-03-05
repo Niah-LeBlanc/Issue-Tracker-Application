@@ -1,85 +1,91 @@
-import { useState } from "react"
-import type { FormEvent } from "react"
-import { Link } from 'react-router-dom';
-import { authClient } from "../auth-client";
-import { useNavigate } from "react-router-dom";
+import { useState } from 'react'
+import type { FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import { authClient } from '../auth-client'
+import { useNavigate } from 'react-router-dom'
 import loginSchema from '../schemas/loginSchema'
 
-function Login() {
+export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setErrors({});
-
-    try {
-      const result = loginSchema.safeParse({ email, password });
-      if (!result.success) {
-        const fieldErrors: Record<string, string> = {};
-        result.error.issues.forEach(issue => {
-          fieldErrors[String(issue.path[0])] = issue.message;
-        });
-        setErrors(fieldErrors);
-        return;
-      }
-
-      const res = await authClient.signIn.email({ email, password });
-      if (res.error) {
-        setErrors({ submit: res.error.message || "An error occurred" });
-      } else {
-        navigate("/");
-      }
-    } catch (error) {
-      console.error("Login failed:", error);
-      setErrors({ submit: "An unexpected error occurred" });
+    e.preventDefault()
+    setErrors({})
+    const r = loginSchema.safeParse({ email, password })
+    if (!r.success) {
+      const fe: Record<string, string> = {}
+      r.error.issues.forEach(i => { fe[String(i.path[0])] = i.message })
+      setErrors(fe); return
     }
+    setLoading(true)
+    try {
+      const res = await authClient.signIn.email({ email, password })
+      if (res.error) setErrors({ submit: res.error.message || 'An error occurred' })
+      else navigate('/')
+    } catch { setErrors({ submit: 'An unexpected error occurred' }) }
+    finally { setLoading(false) }
   }
 
   return (
-    <>
-      <div className="bg-blue-300 h-screen w-screen">
-        <div className="flex flex-col items-center flex-1 h-full justify-center px-4 sm:px-0">
-          <div className="flex rounded-lg shadow-lg w-full sm:w-3/4 lg:w-1/2 bg-white sm:mx-0" style={{ height: "500px" }}>
-            <div className="flex flex-col w-full md:w-1/2 p-4">
-              <div className="flex flex-col flex-1 justify-center mb-8">
-                <h1 className="text-4xl text-center font-thin">Welcome Back</h1>
-                <div className="w-full mt-4">
-                  <form className="form-horizontal w-3/4 mx-auto" method="POST" onSubmit={handleSubmit}>
-                    {errors.submit && <p style={{ color: 'red' }}>{errors.submit}</p>}
-                    <div className="flex flex-col mt-4">
-                      <input id="email" type="text" className="grow h-8 px-2 border rounded border-grey-400" name="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-                      {errors.email && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.email}</p>}
-                    </div>
-                    <div className="flex flex-col mt-4">
-                      <input id="password" type="password" className="grow h-8 px-2 rounded border border-grey-400" name="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-                      {errors.password && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.password}</p>}
-                    </div>
-                    <div className="flex items-center mt-4">
-                      <input type="checkbox" name="remember" id="remember" className="mr-2" />
-                      <label htmlFor="remember" className="text-sm text-grey-dark">Remember Me</label>
-                    </div>
-                    <div className="flex flex-col mt-8">
-                      <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded">Login</button>
-                    </div>
-                    <div className="flex flex-col mt-3">
-                      <Link to='/Register' className="bg-gray-500 hover:bg-gray-600 text-center text-white text-sm font-semibold py-2 px-4 rounded">Register</Link>
-                    </div>
-                  </form>
-                  <div className="text-center mt-4">
-                    <a className="no-underline hover:underline text-blue-dark text-xs" href="#">Forgot Your Password?</a>
-                  </div>
-                </div>
-              </div>
+    <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
+      <div className="w-full max-w-sm bg-white border border-neutral-200 rounded-lg p-8 shadow-sm">
+
+        {/* Header */}
+        <div className="mb-7">
+          <h1 className="text-2xl font-bold text-neutral-900 mb-1">Welcome back</h1>
+          <p className="text-sm text-neutral-500">Sign in to your account</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {errors.submit && (
+            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+              {errors.submit}
             </div>
-            <div className="hidden md:block md:w-1/2 rounded-r-lg backgroundArea"></div>
+          )}
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-neutral-700">Email address</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@company.com"
+              className="w-full border border-neutral-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition"
+            />
+            {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
           </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-neutral-700">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full border border-neutral-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition"
+            />
+            {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-neutral-900 text-white font-medium text-sm py-2.5 rounded-md hover:bg-neutral-700 transition-colors disabled:opacity-50 mt-2"
+          >
+            {loading ? 'Signing in…' : 'Sign In'}
+          </button>
+        </form>
+
+        <div className="mt-6 pt-6 border-t border-neutral-100 text-center">
+          <Link to="/Register" className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">
+            Don't have an account? <span className="font-medium text-neutral-700">Register →</span>
+          </Link>
         </div>
       </div>
-    </>
+    </div>
   )
 }
-
-export default Login

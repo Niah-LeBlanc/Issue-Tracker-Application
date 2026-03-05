@@ -1,150 +1,112 @@
-import { useNavigate, useLocation } from 'react-router-dom';
-import React, { useState, useEffect } from 'react';
-import api from '../api';
-import userEditSchema from '../schemas/userEditSchema';
-import { z } from "zod";
+import { useNavigate, useLocation } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import api from '../api'
+import userEditSchema from '../schemas/userEditSchema'
+import { z } from 'zod'
+import { ArrowLeft } from 'lucide-react'
 
-function UserEditor({ showError, showSuccess }: { showError: (message: string) => void; showSuccess: (message: string) => void }) {
+const ROLES = [
+  { value: 'developer', label: 'Developer' },
+  { value: 'business analyst', label: 'Business Analyst' },
+  { value: 'quality analyst', label: 'Quality Analyst' },
+  { value: 'product manager', label: 'Product Manager' },
+  { value: 'technical manager', label: 'Technical Manager' },
+  { value: 'admin', label: 'Admin' },
+]
+
+export default function UserEditor({ showError, showSuccess }: { showError: (m: string) => void; showSuccess: (m: string) => void }) {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
-  const navigate = useNavigate();
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
-
-  const handleCheckboxChange = (role: string) => {
-    setSelectedRoles(prev =>
-      prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
-    );
-  };
-
-  const roles = [
-    { value: 'developer', label: 'Developer' },
-    { value: 'business analyst', label: 'Business Analyst' },
-    { value: 'quality analyst', label: 'Quality Analyst' },
-    { value: 'product manager', label: 'Product Manager' },
-    { value: 'technical manager', label: 'Technical Manager' },
-    { value: 'admin', label: 'Admin' }
-  ];
-
-  const location = useLocation();
-  const user = (location.state as { user: any }).user;
-  const userId = user._id;
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([])
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const navigate = useNavigate()
+  const location = useLocation()
+  const user = (location.state as { user: any }).user
+  const userId = user._id
 
   useEffect(() => {
-    if (user) {
-      if (user.email) setEmail(user.email);
-      if (user.name) setName(user.name);
-      if (user.role) {
-        if (Array.isArray(user.role)) {
-          setSelectedRoles(user.role.map((r: any) => (typeof r === 'string' ? r.toLowerCase() : r)));
-        } else if (typeof user.role === 'string') {
-          setSelectedRoles([user.role.toLowerCase()]);
-        }
-      }
+    if (user.email) setEmail(user.email)
+    if (user.name) setName(user.name)
+    if (user.role) {
+      const r = Array.isArray(user.role) ? user.role : [user.role]
+      setSelectedRoles(r.map((x: any) => String(x).toLowerCase()))
     }
-  }, [user]);
+  }, [user])
+
+  const toggle = (role: string) =>
+    setSelectedRoles(p => p.includes(role) ? p.filter(r => r !== role) : [...p, role])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setValidationErrors({});
-    const formData = { email, name, role: selectedRoles };
+    e.preventDefault(); setValidationErrors({})
     try {
-      const validatedData = userEditSchema.parse(formData);
-      await api.patch(`/api/users/${userId}`, validatedData);
-      showSuccess("User updated successfully");
-      navigate('/UserList');
+      await api.patch(`/api/users/${userId}`, userEditSchema.parse({ email, name, role: selectedRoles }))
+      showSuccess('User updated'); navigate('/UserList')
     } catch (err) {
       if (err instanceof z.ZodError) {
-        const fieldErrors: Record<string, string> = {};
-        err.issues.forEach((issue) => {
-          if (issue.path.length > 0) fieldErrors[issue.path[0] as string] = issue.message;
-        });
-        setValidationErrors(fieldErrors);
-        return;
-      }
-      showError("Failed to update user");
-      console.error("Error updating user:", err);
+        const fe: Record<string, string> = {}
+        err.issues.forEach(i => { if (i.path.length > 0) fe[i.path[0] as string] = i.message })
+        setValidationErrors(fe)
+      } else { showError('Failed to update user') }
     }
-  };
+  }
+
+  const inp = 'w-full border border-neutral-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 transition'
+  const lbl = 'block text-xs font-medium text-neutral-600 mb-1.5'
 
   return (
-    <>
-      <section className="py-40 bg-blue-100 bg-opacity-50 h-full">
-        <div className="mx-auto container max-w-2xl md:w-3/4 shadow-md">
-          <div className="bg-gray-200 p-4 border-t-2 bg-opacity-5 border-indigo-400 rounded-t">
-            <div className="max-w-sm mx-auto md:w-full md:mx-0">
-              <h1 className="text-gray-800">{name || user.name}</h1>
+    <div className="min-h-screen bg-neutral-50">
+      <div className="bg-white border-b border-neutral-200 px-6 md:px-10 py-6">
+        <div className="max-w-xl mx-auto">
+          <button onClick={() => navigate('/UserList')} className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition mb-4">
+            <ArrowLeft size={13} /> Back to Users
+          </button>
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">Editing</p>
+          <h1 className="text-xl font-bold text-neutral-900">{name || user.name}</h1>
+        </div>
+      </div>
+
+      <div className="max-w-xl mx-auto px-6 md:px-10 py-8">
+        <form onSubmit={handleSubmit} className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
+          <div className="px-6 py-3 border-b border-neutral-100 bg-neutral-50">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-neutral-500">Account Details</h2>
+          </div>
+          <div className="p-6 space-y-5">
+            <div>
+              <label className={lbl}>Full Name</label>
+              <input type="text" className={inp} value={name} onChange={e => setName(e.target.value)} />
+              {validationErrors.name && <p className="text-xs text-red-500 mt-1">{validationErrors.name}</p>}
+            </div>
+            <div>
+              <label className={lbl}>Email</label>
+              <input type="email" className={inp} value={email} onChange={e => setEmail(e.target.value)} />
+              {validationErrors.email && <p className="text-xs text-red-500 mt-1">{validationErrors.email}</p>}
+            </div>
+            <div>
+              <label className={lbl}>Roles</label>
+              <div className="flex flex-wrap gap-2">
+                {ROLES.map(r => (
+                  <label key={r.value} className={`role-pill${selectedRoles.includes(r.value) ? ' active' : ''}`}>
+                    <input type="checkbox" checked={selectedRoles.includes(r.value)} onChange={() => toggle(r.value)} />
+                    {r.label}
+                  </label>
+                ))}
+              </div>
+              {selectedRoles.length > 0 && (
+                <p className="text-xs text-neutral-400 mt-2">Selected: {selectedRoles.join(', ')}</p>
+              )}
+            </div>
+            <div>
+              <label className={lbl}>Password</label>
+              <input type="password" className={inp + ' opacity-50 cursor-not-allowed'} value="coming soon" disabled />
+            </div>
+            <div className="flex justify-end pt-2">
+              <button type="submit" className="h-9 px-6 bg-neutral-900 text-white text-sm rounded-md hover:bg-neutral-700 transition font-medium">
+                Save Changes
+              </button>
             </div>
           </div>
-          <form onSubmit={handleSubmit}>
-            <div className="bg-white space-y-6">
-              <div className="md:inline-flex space-y-4 md:space-y-0 w-full p-4 text-gray-500 items-center">
-                <h2 className="md:w-1/3 max-w-sm mx-auto text-gray-800">Account</h2>
-                <div className="md:w-2/3 max-w-sm mx-auto">
-                  <label className="text-sm text-gray-800">Email</label>
-                  <div className="w-full inline-flex border">
-                    <div className="pt-2 w-1/12 bg-gray-100 bg-opacity-50">
-                      <svg fill="none" className="w-6 text-gray-400 mx-auto" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 00 2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <input type="email" className="w-11/12 focus:outline-none focus:text-gray-600 p-2" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  </div>
-                  {validationErrors.email && <p className="text-sm text-red-500">{validationErrors.email}</p>}
-                </div>
-              </div>
-              <hr />
-              <div className="md:inline-flex space-y-4 md:space-y-0 w-full p-4 text-gray-500 items-center">
-                <h2 className="md:w-1/3 mx-auto max-w-sm text-gray-800">Personal info</h2>
-                <div className="md:w-2/3 mx-auto max-w-sm space-y-5">
-                  <div>
-                    <label className="text-sm text-gray-800">Full name</label>
-                    <div className="w-full inline-flex border">
-                      <div className="w-1/12 pt-2 bg-gray-100">
-                        <svg fill="none" className="w-6 text-gray-400 mx-auto" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </div>
-                      <input type="text" className="w-11/12 focus:outline-none focus:text-gray-600 p-2" value={name} onChange={(e) => setName(e.target.value)} />
-                    </div>
-                    {validationErrors.name && <p className="text-sm text-red-500">{validationErrors.name}</p>}
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-800">Role</label>
-                    <div className="input-group">
-                      {roles.map((role, index) => (
-                        <label key={index} className="checkbox">
-                          <input className="checkbox__input" type="checkbox" name={`role-${index}`} value={role.value} checked={selectedRoles.includes(role.value)} onChange={() => handleCheckboxChange(role.value)} />
-                          <span className="checkbox__label">{role.label}</span>
-                        </label>
-                      ))}
-                      <div style={{ marginTop: '1rem' }}>
-                        <strong>Selected Roles:</strong> {selectedRoles.join(', ') || 'None'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <hr />
-              <div className="md:inline-flex w-full space-y-4 md:space-y-0 p-8 text-gray-500 items-center">
-                <h2 className="md:w-4/12 max-w-sm mx-auto text-gray-800">Change password</h2>
-                <div className="md:w-5/12 w-full md:pl-9 max-w-sm mx-auto space-y-5 md:inline-flex pl-2">
-                  <div className="w-full inline-flex border-b">
-                    <input type="password" className="w-11/12 focus:outline-none focus:text-gray-600 p-2 ml-4" placeholder="New" value='coming soon' disabled />
-                  </div>
-                </div>
-                <div className="md:w-3/12 text-center md:pl-6">
-                  <button type='submit' className="text-white w-full mx-auto max-w-sm rounded-md text-center bg-indigo-400 py-2 px-4 inline-flex items-center focus:outline-none md:float-right hover:cursor-pointer">
-                    Update
-                  </button>
-                </div>
-              </div>
-            </div>
-          </form>
-        </div>
-      </section>
-    </>
+        </form>
+      </div>
+    </div>
   )
 }
-
-export default UserEditor
