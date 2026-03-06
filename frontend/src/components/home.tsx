@@ -30,9 +30,9 @@ export default function Home() {
     <div className="bg-white text-neutral-900">
 
       {/* ── HERO ── */}
-      <section className="relative min-h-[88vh] overflow-hidden">
+      <section className="relative invert min-h-[88vh] pr-150 overflow-hidden">
         <img
-          src="/heroBackground.avif"
+          src="/IssueTrackerHero.png"
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
         />
