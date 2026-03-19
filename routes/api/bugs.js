@@ -1,7 +1,7 @@
 // bugs.js — Bug route handlers
 import { bugSchema, bugPatchSchema, bugClassifySchema, bugAssignSchema, bugCloseSchema, bugListQuerySchema } from '../../middleware/schema.js';
-import { listAll, getByField, assignBugToUser, insertNew, updateBug } from '../../database.js';
-import { validId, validBody, validQuery } from '../../middleware/validation.js';
+import { listAll, getByField, assignBugToUser, insertNew, insertIntoDocument, updateBug } from '../../database.js';
+import { validId, toObjectId, validBody, validQuery } from '../../middleware/validation.js';
 import { attachSession, hasPermission, isAuthenticated } from '../../middleware/authentication.js';
 import express from 'express';
 import debug from 'debug';
@@ -14,9 +14,9 @@ router.use(express.json());
 // --- GET / (list all bugs) ---
 router.get('', attachSession, isAuthenticated, hasPermission('canViewData'), validQuery(bugListQuerySchema), async (req, res) => {
   try {
-    const foundData = await listAll('bug', req.query);
+    const foundData = await listAll('bugs', req.query);
     debugBug('Success: (GET / bugs)');
-    return res.status(200).json([foundData]);
+    return res.status(200).json(foundData);
   } catch (err) {
     autoCatch(err, res, 'Failed to list bugs');
   }
@@ -26,7 +26,7 @@ router.get('', attachSession, isAuthenticated, hasPermission('canViewData'), val
 router.get('/:bugId', attachSession, isAuthenticated, hasPermission('canViewData'), validId('bugId'), async (req, res) => {
   try {
     const { bugId } = req.params;
-    const bug = await getByField('bug', '_id', bugId);
+    const bug = await getByField('bugs', '_id', bugId);
     debugBug(`Success: (GET /:bugId: ${bugId})`);
     return res.status(200).json(bug);
   } catch (err) {
@@ -44,14 +44,14 @@ router.post('', attachSession, isAuthenticated, hasPermission('canViewData'), va
       classification: 'unclassified',
       closed: false,
     };
-    const result = await insertNew('bug', newBug);
+    const result = await insertNew('bugs', newBug);
     const bugId = result.insertedId || newBug._id;
     await insertNew('edits', {
       timestamp: new Date(),
-      col: 'bug',
+      col: 'bugs',
       op: 'insert',
       target: { _id: bugId },
-      update: 'bug',
+      update: 'bugs',
       performedBy: req.user.email,
     });
     debugBug(`Success: (POST /: ${bugId})`);
@@ -90,8 +90,8 @@ router.patch('/:bugId/classify', attachSession, isAuthenticated, validId('bugId'
 router.patch('/:bugId/assign', attachSession, isAuthenticated, validId('bugId'), hasPermission('canReassignAnyBug', 'canReassignIfAssignedTo', 'canEditMyBug'), validBody(bugAssignSchema), async (req, res) => {
   try {
     const { bugId } = req.params;
-    const userId = validId(Object.values(req.body)[0]);
-    const user = await getByField('user', '_id', userId); // fix: was 'users' (wrong collection)
+    const userId = toObjectId(Object.values(req.body)[0]);
+    const user = await getByField('user', '_id', userId);
     await assignBugToUser(userId, bugId);
     debugBug(`Success: (PATCH /:bugId/assign: ${bugId})`);
     return res.status(200).json({ message: `Bug ${bugId} assigned to ${user.fullName}.` });
@@ -112,6 +112,21 @@ router.patch('/:bugId/close', attachSession, isAuthenticated, hasPermission('can
     return res.status(200).json({ message: `Bug ${bugId} is now ${status}.` });
   } catch (err) {
     autoCatch(err, res, 'Failed to close/open bug');
+  }
+});
+
+// --- POST /:bugId/worklog ---
+router.post('/:bugId/worklog', attachSession, isAuthenticated, hasPermission('canViewData'), validId('bugId'), async (req, res) => {
+  try {
+    const { bugId } = req.params;
+    const { time } = req.body;
+    if (!time || isNaN(Number(time)) || Number(time) <= 0)
+      return res.status(400).json({ error: 'time must be a positive number' });
+    await insertIntoDocument('bugs', bugId, 'workLog', { time: Number(time), loggedBy: req.user.email });
+    debugBug(`Success: (POST /:bugId/worklog: ${bugId})`);
+    return res.status(201).json({ message: `Logged ${time} hour(s) to bug ${bugId}` });
+  } catch (err) {
+    autoCatch(err, res, 'Failed to log hours');
   }
 });
 

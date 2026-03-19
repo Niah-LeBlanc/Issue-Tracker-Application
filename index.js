@@ -18,20 +18,15 @@ const app = express();
 
 // --- Middleware ---
 app.use(cors({
-  origin: [
-    "http://localhost:5000",
-    "http://localhost:5050",
-    "http://localhost:3000",
-    "http://localhost:8080",
-    "http://localhost:5173",
-  ],
+  origin: process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(",")
+    : ["http://localhost:5173", "http://localhost:3000"],
   credentials: true,
 }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static("frontend/dist"));
 
-// --- Routes ---
+// --- API Routes ---
 app.use("/api/users", userRouter);
 app.use("/api/bugs", bugRouter);
 app.use("/api/comments", commentRouter);
@@ -44,11 +39,10 @@ ping()
   .catch((err) => console.error("Database ping failed:", err));
 
 // --- Error Handling ---
-app.use((req, res) => res.status(404).json({ error: "Route not found" }));
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: "Internal Server Error" });
 });
 
 // --- Start Server ---
-app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
+app.listen(port, () => console.log(`Backend running at http://localhost:${port}`));

@@ -21,12 +21,18 @@ export const userSchema = Joi.object({
 });
 
 export const userPatchSchema = (allowRoleEdit = false) => Joi.object({
-  email: Joi.string().min(1).optional(),
+  email: Joi.string().email().min(1).optional(),
   password: Joi.string().min(3).optional(),
   givenName: Joi.string().min(1).optional(),
   familyName: Joi.string().min(1).optional(),
   fullName: Joi.string().min(1).optional(),
-  role: allowRoleEdit ? Joi.string().valid(...validRoles).optional() : Joi.forbidden(),
+  name: Joi.string().min(1).optional(),
+  role: allowRoleEdit
+    ? Joi.alternatives().try(
+        Joi.array().items(Joi.string().valid(...validRoles)),
+        Joi.string().valid(...validRoles)
+      ).optional()
+    : Joi.forbidden(),
 }).min(1).required();
 
 export const userLoginSchema = Joi.object({
@@ -75,17 +81,13 @@ export const commentSchema = Joi.object({
 
 // --- Test schemas ---
 export const testSchema = Joi.object({
-  description: Joi.string().required(),
-  preconditions: Joi.string().required(),
-  steps: Joi.string().required(),
-  expectedResult: Joi.string().required(),
-  actualResult: Joi.string().required(),
+  title: Joi.string().min(2).required(),
+  status: Joi.string().valid('passed', 'failed').required(),
+  description: Joi.string().min(2).required(),
 }).required();
 
 export const testPatchSchema = Joi.object({
-  description: Joi.string().optional(),
-  preconditions: Joi.string().optional(),
-  steps: Joi.string().optional(),
-  expectedResult: Joi.string().optional(),
-  actualResult: Joi.string().optional(),
+  title: Joi.string().min(2).optional(),
+  status: Joi.string().valid('passed', 'failed').optional(),
+  description: Joi.string().min(2).optional(),
 }).min(1).required();

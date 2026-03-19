@@ -3,7 +3,7 @@ import { userSchema, userLoginSchema, userPatchSchema, userListQuerySchema } fro
 import { attachSession, hasPermission, hasRole, isAuthenticated } from '../../middleware/authentication.js';
 import { listAll, getByField, deleteByObject, updateUser, insertNew } from '../../database.js';
 import { genPassword, comparePassword } from '../../middleware/bcryptFunctions.js';
-import { validId, validBody, validQuery } from '../../middleware/validation.js';
+import { validId, toObjectId, validBody, validQuery } from '../../middleware/validation.js';
 import express from 'express';
 import debug from 'debug';
 
@@ -15,9 +15,9 @@ router.use(express.json());
 // --- GET /me ---
 router.get('/me', attachSession, isAuthenticated, async (req, res) => {
   try {
-    const foundUser = await getByField('user', '_id', validId(req.user.id));
+    const foundUser = await getByField('user', '_id', toObjectId(req.user.id));
     debugUser(`Success: (GET /me: ${req.user.id})`);
-    return res.status(200).json([foundUser]);
+    return res.status(200).json(foundUser);
   } catch (err) {
     autoCatch(err, res, 'Failed to get user');
   }
@@ -28,7 +28,7 @@ router.put('/me', attachSession, isAuthenticated, validBody(userPatchSchema(fals
   try {
     const updates = req.body;
     if (updates.password) updates.password = await genPassword(updates.password);
-    const updatedUser = await updateUser(validId(req.user.id), updates);
+    const updatedUser = await updateUser(toObjectId(req.user.id), updates);
     debugUser(`Success: (PUT /me: ${req.user.id})`); // fix: was req.id
     return res.status(200).json(updatedUser);
   } catch (err) {
@@ -87,7 +87,7 @@ router.post('/login', attachSession, isAuthenticated, validBody(userLoginSchema)
 });
 
 // --- PATCH /:userId ---
-router.patch('/:userId', attachSession, isAuthenticated, hasPermission('canEditAnyUser'), validId('userId'), validBody(userPatchSchema(false)), async (req, res) => {
+router.patch('/:userId', attachSession, isAuthenticated, hasPermission('canEditAnyUser'), validId('userId'), validBody(userPatchSchema(true)), async (req, res) => {
   try {
     const { userId } = req.params;
     const updates = req.body;

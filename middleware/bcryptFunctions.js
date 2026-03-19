@@ -1,5 +1,5 @@
 // bcryptFunctions.js — Password hashing and comparison
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 // Returns a hashed password string
 export async function genPassword(passwordToEncrypt) {

@@ -118,7 +118,7 @@ export async function getNestedItem(collectionName, fieldName, fieldValue, neste
 
 // --- Insert New Document ---
 export async function insertNew(collectionName, newFieldValue) {
-  const uniqueChecks = { email: "user", title: "bug" };
+  const uniqueChecks = { email: "user", title: "bugs" };
 
   for (const [field, collection] of Object.entries(uniqueChecks)) {
     if (newFieldValue[field]) {
