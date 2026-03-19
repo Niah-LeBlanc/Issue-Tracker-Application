@@ -14,7 +14,8 @@ export default function Navbar({ onLogout }: NavbarProps) {
   useEffect(() => {
     if (!session) return
     api.get('/api/users/me').then(r => {
-      const role = r.data?.role
+      const d = Array.isArray(r.data) ? r.data[0] : r.data
+      const role = d?.role
       if (Array.isArray(role)) setRoles(role.map((x: any) => String(x).toLowerCase()))
       else if (typeof role === 'string') setRoles([role.toLowerCase()])
     }).catch(() => {})
@@ -33,6 +34,7 @@ export default function Navbar({ onLogout }: NavbarProps) {
             <Bug size={14} className="text-white" />
           </div>
           <span className="font-semibold text-sm tracking-tight text-neutral-900">BugTrack</span>
+          <span className="text-[10px] font-mono text-neutral-400 border border-neutral-200 px-1.5 py-0.5 rounded ml-1">demo</span>
         </Link>
 
         {/* Desktop */}
@@ -49,7 +51,7 @@ export default function Navbar({ onLogout }: NavbarProps) {
           {!session ? <>
             <Link to="/Login" className={link}>Sign in</Link>
             <Link to="/Register" className="text-sm font-medium bg-neutral-900 text-white px-3.5 py-1.5 rounded-md hover:bg-neutral-700 transition-colors">
-              Sign up
+              Try demo
             </Link>
           </> : <>
             <Link to="/YourAccount" className={link}>Account</Link>
@@ -78,7 +80,7 @@ export default function Navbar({ onLogout }: NavbarProps) {
           </>}
           {!session && <>
             <Link to="/Login" className={link + ' block'} onClick={() => setOpen(false)}>Sign in</Link>
-            <Link to="/Register" className={link + ' block'} onClick={() => setOpen(false)}>Sign up</Link>
+            <Link to="/Register" className={link + ' block'} onClick={() => setOpen(false)}>Try demo</Link>
           </>}
         </div>
       )}

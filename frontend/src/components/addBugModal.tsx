@@ -19,7 +19,7 @@ export default function AddBugModal({ onClose }: { onClose: () => void }) {
     setLoading(true)
     try {
       const data = bugCreateSchema.parse({ title, description, stepsToReproduce })
-      await api.post('/api/bugs/new', data)
+      await api.post('/api/bugs', data)
       toast.success('Bug reported successfully')
       onClose()
       navigate(0)

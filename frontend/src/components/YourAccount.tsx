@@ -13,7 +13,7 @@ export default function YourAccount({ showError, showSuccess }: { showError: (m:
 
   useEffect(() => {
     api.get('/api/users/me').then(r => {
-      const d = r.data
+      const d = Array.isArray(r.data) ? r.data[0] : r.data
       if (d.email) setEmail(d.email)
       if (d.name) setName(d.name)
       if (d.role) {
@@ -26,7 +26,7 @@ export default function YourAccount({ showError, showSuccess }: { showError: (m:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setValidationErrors({})
     try {
-      await api.patch('/api/users/me', userEditSchema.parse({ email, name }))
+      await api.put('/api/users/me', userEditSchema.parse({ email, name }))
       showSuccess('Account updated'); navigate('/UserList')
     } catch (err) {
       if (err instanceof z.ZodError) {

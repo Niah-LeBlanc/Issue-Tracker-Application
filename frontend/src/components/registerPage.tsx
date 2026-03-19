@@ -56,7 +56,7 @@ export default function Register() {
 
         <div className="mb-7">
           <h1 className="text-2xl font-bold text-neutral-900 mb-1">Create an account</h1>
-          <p className="text-sm text-neutral-500">Join BugTrack and start squashing bugs</p>
+          <p className="text-sm text-neutral-500">Try the demo — create an account to explore the app</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -77,7 +77,7 @@ export default function Register() {
 
           <div>
             <label className={labelCls}>Email address</label>
-            <input type="email" className={inputCls} placeholder="you@company.com" value={email} onChange={e => setEmail(e.target.value)} />
+            <input type="email" className={inputCls} placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} />
             {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
           </div>
 

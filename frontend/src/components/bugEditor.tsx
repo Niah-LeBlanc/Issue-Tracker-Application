@@ -7,6 +7,7 @@ import { Trash2, ArrowLeft } from 'lucide-react'
 import testcaseSchema from '../schemas/testcaseSchema'
 import logHourSchema from '../schemas/logHourSchema'
 import commentSchema from '../schemas/commentSchema'
+import { useSession } from '../auth-client'
 
 interface BugUpdate { title?: string; description?: string; stepsToReproduce?: string }
 
@@ -40,6 +41,7 @@ export default function BugEditor({ showError, showSuccess }: { showError: (m: s
   const location = useLocation()
   const bug = (location.state as { bug: any }).bug
   const bugId = bug._id
+  const { data: session } = useSession()
 
   useEffect(() => {
     if (bug.title) setTitle(bug.title)
@@ -71,13 +73,22 @@ export default function BugEditor({ showError, showSuccess }: { showError: (m: s
   }
 
   const addComment = async () => {
-    try { await api.post(`/api/bugs/${bugId}/comments`, commentSchema.parse({ text: commentText })); window.location.reload() }
-    catch (e) { if (!zod(e)) showError('Failed to add comment') }
+    try {
+      const parsed = commentSchema.parse({ text: commentText })
+      await api.post(`/api/comments/${bugId}/comments`, {
+        author: session?.user?.email ?? 'anonymous',
+        commentText: parsed.text,
+      })
+      window.location.reload()
+    } catch (e) { if (!zod(e)) showError('Failed to add comment') }
   }
 
   const logHours = async () => {
-    try { await api.patch(`/api/bugs/${bugId}/worklog`, logHourSchema.parse({ time: Number(loggedHours) })); window.location.reload() }
-    catch (e) { if (!zod(e)) showError('Failed to log hours') }
+    try {
+      const { time } = logHourSchema.parse({ time: Number(loggedHours) })
+      await api.post(`/api/bugs/${bugId}/worklog`, { time })
+      window.location.reload()
+    } catch (e) { if (!zod(e)) showError('Failed to log hours') }
   }
 
   const addTestcase = async () => {
@@ -89,16 +100,21 @@ export default function BugEditor({ showError, showSuccess }: { showError: (m: s
 
   const classifyBug = async () => {
     const c = classification.toLowerCase()
-    if (!['approved', 'unapproved', 'duplicate'].includes(c)) { showError('Use: Approved, Unapproved, or Duplicate'); return }
+    if (!['critical', 'major', 'minor', 'trivial'].includes(c)) { showError('Use: Critical, Major, Minor, or Trivial'); return }
     try {
-      await api.patch(`/api/bugs/${bugId}/classify`, { classification })
-      await api.patch(`/api/bugs/${bugId}`, { closed: selectedValue === 'true' })
+      await api.patch(`/api/bugs/${bugId}/classify`, { classification: c })
+      await api.patch(`/api/bugs/${bugId}/close`, { closed: selectedValue === 'true' })
       navigate('/BugList')
     } catch { showError('Failed to classify bug') }
   }
 
   const assignUser = async () => {
-    try { await api.patch(`/api/bugs/${bugId}/assign`, { assignedToUserEmail: selectedUser }); navigate('/BugList') }
+    try {
+      const user = users.find((u: any) => u.email === selectedUser)
+      if (!user) { showError('Please select a valid user'); return }
+      await api.patch(`/api/bugs/${bugId}/assign`, { assignedToUserId: user._id })
+      navigate('/BugList')
+    }
     catch { showError('Failed to assign user') }
   }
 
@@ -170,7 +186,12 @@ export default function BugEditor({ showError, showSuccess }: { showError: (m: s
           <div className="space-y-4">
             <div>
               <label className={lbl}>Type</label>
-              <input type="text" className={inp} placeholder="approved / unapproved / duplicate" value={classification} onChange={e => setClassification(e.target.value)} />
+              <select className={inp + ' cursor-pointer'} value={classification} onChange={e => setClassification(e.target.value)}>
+                <option value="">Select classification…</option>
+                {['critical', 'major', 'minor', 'trivial'].map(c => (
+                  <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className={lbl}>Mark as closed?</label>

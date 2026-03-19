@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import PieChart from './Piechart'
 import { Users, Bug, CircleDot, CheckCircle2 } from 'lucide-react'
+import api from '../api'
 
 export default function Dashboard() {
   const [totalUsers, setTotalUsers] = useState(0)
@@ -11,9 +12,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     const load = async () => {
-      const [bugRes, userRes] = await Promise.all([fetch('/api/bugs'), fetch('/api/users')])
-      const bugs = await bugRes.json()
-      const users = await userRes.json()
+      const [bugRes, userRes] = await Promise.all([api.get('/api/bugs'), api.get('/api/users')])
+      const bugs = bugRes.data
+      const users = userRes.data
       setTotalBugs(bugs.length)
       setTotalUsers(users.length)
       setUsers(users)
